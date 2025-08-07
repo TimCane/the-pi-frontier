@@ -1,0 +1,159 @@
+[
+    {
+        "createdAt": "2025-08-07T20:51:11.110Z",
+        "updatedAt": "2025-08-07T20:58:18.000Z",
+        "id": "Y5hbtQGBPCLu48E8",
+        "name": "Backup workflows to disk",
+        "active": false,
+        "isArchived": false,
+        "nodes": [
+            {
+                "parameters": {},
+                "type": "n8n-nodes-base.manualTrigger",
+                "typeVersion": 1,
+                "position": [
+                    160,
+                    -32
+                ],
+                "id": "e8ed6c18-bb8a-49db-91b4-e2cfb8ef227a",
+                "name": "When clicking ‘Execute workflow’"
+            },
+            {
+                "parameters": {
+                    "filters": {},
+                    "requestOptions": {}
+                },
+                "type": "n8n-nodes-base.n8n",
+                "typeVersion": 1,
+                "position": [
+                    384,
+                    -32
+                ],
+                "id": "d0d5d2b9-e308-41a4-b0a1-5d5126a827ab",
+                "name": "Get many workflows",
+                "credentials": {
+                    "n8nApi": {
+                        "id": "edBl5LtcPi3nKBeo",
+                        "name": "n8n account"
+                    }
+                }
+            },
+            {
+                "parameters": {
+                    "options": {}
+                },
+                "type": "n8n-nodes-base.splitInBatches",
+                "typeVersion": 3,
+                "position": [
+                    592,
+                    -32
+                ],
+                "id": "130cc156-d5dc-47f2-a07b-29d184029358",
+                "name": "Loop Over Items"
+            },
+            {
+                "parameters": {
+                    "operation": "toJson",
+                    "options": {
+                        "format": true,
+                        "fileName": "={{ $json.name + \".json\" }}"
+                    }
+                },
+                "type": "n8n-nodes-base.convertToFile",
+                "typeVersion": 1.1,
+                "position": [
+                    896,
+                    64
+                ],
+                "id": "bf971c1f-dcee-4634-bbae-ddf46aa9309d",
+                "name": "Convert to File"
+            },
+            {
+                "parameters": {
+                    "operation": "write",
+                    "fileName": "=/home/node/repo/sheriff/workflows/{{ $('Loop Over Items').item.json.name + \".json\" }}",
+                    "options": {
+                        "append": false
+                    }
+                },
+                "type": "n8n-nodes-base.readWriteFile",
+                "typeVersion": 1,
+                "position": [
+                    1104,
+                    64
+                ],
+                "id": "344eb432-46cb-4558-8476-e0795b976892",
+                "name": "Read/Write Files from Disk"
+            }
+        ],
+        "connections": {
+            "When clicking ‘Execute workflow’": {
+                "main": [
+                    [
+                        {
+                            "node": "Get many workflows",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ]
+                ]
+            },
+            "Get many workflows": {
+                "main": [
+                    [
+                        {
+                            "node": "Loop Over Items",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ]
+                ]
+            },
+            "Loop Over Items": {
+                "main": [
+                    [],
+                    [
+                        {
+                            "node": "Convert to File",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ]
+                ]
+            },
+            "Convert to File": {
+                "main": [
+                    [
+                        {
+                            "node": "Read/Write Files from Disk",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ]
+                ]
+            },
+            "Read/Write Files from Disk": {
+                "main": [
+                    [
+                        {
+                            "node": "Loop Over Items",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ]
+                ]
+            }
+        },
+        "settings": {
+            "executionOrder": "v1"
+        },
+        "staticData": null,
+        "meta": {
+            "templateCredsSetupCompleted": true
+        },
+        "pinData": {},
+        "versionId": "eb1c9071-9b73-45f7-8569-dcf2b211748a",
+        "triggerCount": 0,
+        "tags": []
+    }
+]
