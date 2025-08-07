@@ -1,0 +1,57 @@
+volumes:
+  n8n_storage:
+    name: n8n_storage
+  mysql_storage:
+    name: mysql_storage
+
+networks:
+  thermo:
+    name: thermo
+    driver: bridge
+
+services:
+  n8n:
+    image: docker.n8n.io/n8nio/n8n
+    container_name: n8n
+    restart: always
+    environment:
+      GENERIC_TIMEZONE: Europe/London
+      NODE_ENV: production
+      N8N_SECURE_COOKIE: false
+    ports:
+      - ${N8N_PORT:-5678}:${N8N_PORT:-5678}
+    volumes:
+      - n8n_storage:/home/node/.n8n
+    networks:
+      - thermo
+    depends_on:
+      - mysql
+
+  mysql:
+    image: arm64v8/mysql
+    container_name: mysql
+    restart: always
+    environment:
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-db}
+      MYSQL_USER: ${MYSQL_USER:-user}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-password}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-password}
+    ports:
+      - ${MYSQL_PORT:-3306}:${MYSQL_PORT:-3306}
+    expose:
+      - ${MYSQL_PORT:-3306}
+    volumes:
+      - mysql_storage:/var/lib/mysql
+    networks:
+      - thermo
+
+  grafana:
+    image: grafana/grafana-enterprise
+    container_name: grafana
+    restart: always
+    ports:
+      - ${GRAFANA_PORT:-3000}:${GRAFANA_PORT:-3000}
+    networks:
+      - thermo
+    depends_on:
+      - mysql
