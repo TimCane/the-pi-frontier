@@ -2,9 +2,6 @@ import network
 import requests
 from time import sleep, time
 from picozero import pico_temp_sensor, pico_led
-import machine
-import rp2
-import sys
 import config
 
 def get_temperature():
@@ -77,13 +74,20 @@ def broadcast_temperature(current_temperature):
 def run():
     loop = True
     while loop == True:
+        consecutive_errors = 0
         try:
             broadcast_temperature(get_temperature())
+            consecutive_errors = 0
 
-            print("Sleeping for " + str(config.SLEEP_DURATION) + " seconds")
-            sleep(config.SLEEP_DURATION)
         except Exception as e:
             print(f"Error: {e}")
-            loop = False
+            consecutive_errors += 1
+            if consecutive_errors > 5:
+                print("Errored more than 5 times in a row. Stopping")
+                loop = False
+        finally:
+            print("Sleeping for " + str(config.SLEEP_DURATION) + " seconds")
+            sleep(config.SLEEP_DURATION)
 
 run()
+
