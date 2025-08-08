@@ -1,0 +1,405 @@
+[
+  {
+    "createdAt": "2025-08-08T15:37:51.692Z",
+    "updatedAt": "2025-08-08T20:30:15.000Z",
+    "id": "fNsF7UuQj3MFsdUO",
+    "name": "Process Sensors",
+    "active": true,
+    "isArchived": false,
+    "nodes": [
+      {
+        "parameters": {
+          "httpMethod": "POST",
+          "path": "sensors",
+          "authentication": "basicAuth",
+          "responseMode": "responseNode",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.webhook",
+        "typeVersion": 2.1,
+        "position": [
+          -320,
+          -272
+        ],
+        "id": "63f8d9e9-c900-4328-bed2-3d1761935118",
+        "name": "Webhook",
+        "webhookId": "6d43dd96-1f2c-43d4-8c0e-d4efd761aec7",
+        "credentials": {
+          "httpBasicAuth": {
+            "id": "bGoKVwF8HP9B7Xor",
+            "name": "Webhook Auth"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "respondWith": "noData",
+          "options": {
+            "responseCode": 200
+          }
+        },
+        "type": "n8n-nodes-base.respondToWebhook",
+        "typeVersion": 1.4,
+        "position": [
+          1024,
+          -368
+        ],
+        "id": "6ffea844-915c-471e-a100-0c0081dce07b",
+        "name": "Respond to Webhook"
+      },
+      {
+        "parameters": {
+          "operation": "select",
+          "table": {
+            "__rl": true,
+            "value": "device",
+            "mode": "list",
+            "cachedResultName": "device"
+          },
+          "limit": 1,
+          "where": {
+            "values": [
+              {
+                "column": "name",
+                "value": "={{ $json.body.host }}"
+              }
+            ]
+          },
+          "options": {}
+        },
+        "type": "n8n-nodes-base.mySql",
+        "typeVersion": 2.5,
+        "position": [
+          -96,
+          -272
+        ],
+        "id": "1641f1d6-fb9d-46ea-a04a-06019f7d37c5",
+        "name": "Check if device exists",
+        "alwaysOutputData": true,
+        "credentials": {
+          "mySql": {
+            "id": "iJIoAuJtlnkHhjiW",
+            "name": "MySQL account"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "table": {
+            "__rl": true,
+            "value": "device",
+            "mode": "list",
+            "cachedResultName": "device"
+          },
+          "dataMode": "defineBelow",
+          "valuesToSend": {
+            "values": [
+              {
+                "column": "name",
+                "value": "={{ $('Webhook').item.json.body.host }}"
+              },
+              {
+                "column": "type",
+                "value": "={{ $('Webhook').item.json.body.type }}"
+              },
+              {
+                "column": "location",
+                "value": "={{ $('Webhook').item.json.body.host.split(\"-\")[1] }}"
+              },
+              {
+                "column": "created_on",
+                "value": "={{ $now }}"
+              }
+            ]
+          },
+          "options": {}
+        },
+        "type": "n8n-nodes-base.mySql",
+        "typeVersion": 2.5,
+        "position": [
+          352,
+          -416
+        ],
+        "id": "3e86b4ba-eb28-417c-862d-52e151ed2030",
+        "name": "Insert device in table",
+        "credentials": {
+          "mySql": {
+            "id": "iJIoAuJtlnkHhjiW",
+            "name": "MySQL account"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "respondWith": "noData",
+          "options": {
+            "responseCode": 400
+          }
+        },
+        "type": "n8n-nodes-base.respondToWebhook",
+        "typeVersion": 1.4,
+        "position": [
+          576,
+          -128
+        ],
+        "id": "e0b224d3-ce3b-4f64-88b5-df47878e6d05",
+        "name": "Respond to Webhook1"
+      },
+      {
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "strict",
+              "version": 2
+            },
+            "conditions": [
+              {
+                "id": "3c92527a-911a-470e-9aea-5b6099bbbfd3",
+                "leftValue": "={{Object.keys($items()[0].json).length === 0}}",
+                "rightValue": "",
+                "operator": {
+                  "type": "boolean",
+                  "operation": "true",
+                  "singleValue": true
+                }
+              }
+            ],
+            "combinator": "and"
+          },
+          "options": {}
+        },
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2.2,
+        "position": [
+          128,
+          -272
+        ],
+        "id": "5e75a383-9d85-4c3a-9003-7ddb85b5e4cb",
+        "name": "If device exists"
+      },
+      {
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "strict",
+              "version": 2
+            },
+            "conditions": [
+              {
+                "id": "97f93b8f-dbbf-49a5-a567-e680e3801049",
+                "leftValue": "={{ $json.type }}",
+                "rightValue": "={{ $('Webhook').item.json.body.type }}",
+                "operator": {
+                  "type": "string",
+                  "operation": "equals",
+                  "name": "filter.operator.equals"
+                }
+              }
+            ],
+            "combinator": "and"
+          },
+          "options": {}
+        },
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2.2,
+        "position": [
+          352,
+          -176
+        ],
+        "id": "01cabb25-2f82-4fae-a3b0-c2e2e5b6147e",
+        "name": "if device is the correct type"
+      },
+      {
+        "parameters": {
+          "rules": {
+            "values": [
+              {
+                "conditions": {
+                  "options": {
+                    "caseSensitive": true,
+                    "leftValue": "",
+                    "typeValidation": "strict",
+                    "version": 2
+                  },
+                  "conditions": [
+                    {
+                      "leftValue": "={{ $('Webhook').item.json.body.type }}",
+                      "rightValue": "temperature",
+                      "operator": {
+                        "type": "string",
+                        "operation": "equals"
+                      },
+                      "id": "19caa35c-4cfb-4cbd-9269-fdb47bb5a0fc"
+                    }
+                  ],
+                  "combinator": "and"
+                },
+                "renameOutput": true,
+                "outputKey": "temperature"
+              }
+            ]
+          },
+          "options": {}
+        },
+        "type": "n8n-nodes-base.switch",
+        "typeVersion": 3.2,
+        "position": [
+          576,
+          -368
+        ],
+        "id": "2cd2d4d6-fba8-4e7c-aac0-f580c02ddf7e",
+        "name": "Switch"
+      },
+      {
+        "parameters": {
+          "table": {
+            "__rl": true,
+            "value": "temperature",
+            "mode": "list",
+            "cachedResultName": "temperature"
+          },
+          "dataMode": "defineBelow",
+          "valuesToSend": {
+            "values": [
+              {
+                "column": "value",
+                "value": "={{ $('Webhook').item.json.body.value }}"
+              },
+              {
+                "column": "device_id",
+                "value": "={{ $json.id }}"
+              },
+              {
+                "column": "recorded_on",
+                "value": "={{ $now }}"
+              }
+            ]
+          },
+          "options": {}
+        },
+        "type": "n8n-nodes-base.mySql",
+        "typeVersion": 2.5,
+        "position": [
+          800,
+          -368
+        ],
+        "id": "c0b0050a-567c-482a-bf0c-948d8c001d71",
+        "name": "Insert temperature in table",
+        "credentials": {
+          "mySql": {
+            "id": "iJIoAuJtlnkHhjiW",
+            "name": "MySQL account"
+          }
+        }
+      }
+    ],
+    "connections": {
+      "Webhook": {
+        "main": [
+          [
+            {
+              "node": "Check if device exists",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Check if device exists": {
+        "main": [
+          [
+            {
+              "node": "If device exists",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Insert device in table": {
+        "main": [
+          [
+            {
+              "node": "Switch",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "If device exists": {
+        "main": [
+          [
+            {
+              "node": "Insert device in table",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "if device is the correct type",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "if device is the correct type": {
+        "main": [
+          [
+            {
+              "node": "Switch",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Respond to Webhook1",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Switch": {
+        "main": [
+          [
+            {
+              "node": "Insert temperature in table",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Insert temperature in table": {
+        "main": [
+          [
+            {
+              "node": "Respond to Webhook",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "settings": {
+      "executionOrder": "v1"
+    },
+    "staticData": null,
+    "meta": {
+      "templateCredsSetupCompleted": true
+    },
+    "pinData": {},
+    "versionId": "c01b65d1-2674-4a50-95db-60d07cf16330",
+    "triggerCount": 1,
+    "tags": []
+  }
+]

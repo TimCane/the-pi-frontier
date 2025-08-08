@@ -1,0 +1,7 @@
+CREATE TABLE device (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    type ENUM('temperature') NOT NULL,
+    location VARCHAR(255) NOT NULL,
+    created_on TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);

@@ -61,7 +61,7 @@ def disconnect_from_wlan():
 def broadcast_temperature(current_temperature):
     connect_to_wlan()
 
-    response = requests.post(config.WEBHOOK_URL,json = {'host': config.HOST_NAME, 'temp': current_temperature}, headers = {"Authorization": config.WEBHOOK_AUTH})
+    response = requests.post(config.WEBHOOK_URL,json = {'host': config.HOST_NAME, 'type': 'temperature' , 'value': current_temperature}, headers = {"Authorization": config.WEBHOOK_AUTH})
 
     response_code = response.status_code
 
