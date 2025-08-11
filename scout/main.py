@@ -1,93 +1,142 @@
+# main.py - Main application file
+import machine
 import network
-import requests
-from time import sleep, time
-from picozero import pico_temp_sensor, pico_led
+import time
+import gc
+from wifi_manager import WiFiManager
+from sensor_handler import SensorHandler
 import config
+import requests
 
-def get_temperature():
-    # This needs to be updated once I have a DS18B20 sensor 
-    return pico_temp_sensor.temp
+# Global variables
+wlan = None
+sensor = None
+led = machine.Pin("LED", machine.Pin.OUT)
+hostname = f"scout-{config.LOCATION}-{config.SENSOR}"
 
-def connect_to_wlan():    
-    wlan = network.WLAN(network.STA_IF)
-    wlan.active(True)
+def setup_hardware():
+    """Initialize hardware components"""
+    global sensor
+    print("Setting up hardware...")
     
-    # Check if already connected
-    if wlan.isconnected():
-        print("Already connected to Wi-Fi")
-        print("IP Address:", wlan.ifconfig()[0])
-        pico_led.on()
+    # Initialize built-in LED
+    led.off()
+    
+    # Initialize sensors/peripherals
+    sensor = SensorHandler(config.DS18X20_DAT_PIN)
+    
+    # Flash LED to indicate hardware ready
+    for _ in range(3):
+        led.on()
+        time.sleep(0.1)
+        led.off()
+        time.sleep(0.1)
+
+def setup_wifi():
+    """Initialize WiFi connection"""
+    global wlan
+    global hostname
+    global led
+    print("Setting up WiFi...")
+    
+    wifi_manager = WiFiManager(hostname,config.WIFI_SSID, config.WIFI_PASSWORD, led)
+    wlan = wifi_manager.connect()
+    
+    if wlan and wlan.isconnected():
+        print(f"Connected to WiFi. IP: {wlan.ifconfig()[0]}")
         return True
+    else:
+        print("Failed to connect to WiFi")
+        return False
+
+def handle_error(error):
+    """Error handling with LED indication"""
+    print(f"Error: {error}")
     
-    print("Connecting to Wi-Fi...")
-    wlan.connect(config.WIFI_SSID, config.WIFI_PASSWORD)
+    f = open('error.txt', 'w')
+    f.write(f"Error: {error}\n")
+    f.close()
+
     
-    # Wait for connection
-    timeout = 10  # 10 seconds timeout
-    start_time = time()
-    while not wlan.isconnected():
-        if time() - start_time > timeout:
-            print("Connection timed out")
-            return False
-        pico_led.on()
-        sleep(0.5)
-        pico_led.off()
-        sleep(0.5)
+    # Flash LED rapidly to indicate error
+    for _ in range(10):
+        led.on()
+        time.sleep(0.05)
+        led.off()
+        time.sleep(0.05)
+
+def send_reading(reading):
+    """Sending """
+    global hostname
     
-    # If connected, print IP address
-    print("Connected to Wi-Fi")
-    print("IP Address:", wlan.ifconfig()[0])
-    pico_led.on()
-    return True
-
-def disconnect_from_wlan():
-    wlan = network.WLAN(network.STA_IF)
+    body = {'host': hostname, 'type': reading['type'] , 'value': reading['value']}
     
-    # Check if already disconnected
-    if not wlan.isconnected():
-        print("Already disconnected from Wi-Fi")
-        return
+    print(f"Sending request to '{config.WEBHOOK_URL}'")
+    print(f"Request contents: '{body}'")
     
-    wlan.active(False)  # Deactivate the Wi-Fi interface to disconnect
-    wlan.deinit()
-    pico_led.off()
-    print("Disconnected from Wi-Fi.")
+    requests.post(config.WEBHOOK_URL,json = body, headers = {"Authorization": config.WEBHOOK_AUTH})
 
-
-
-def broadcast_temperature(current_temperature):
-    connect_to_wlan()
-
-    response = requests.post(config.WEBHOOK_URL,json = {'host': config.HOST_NAME, 'type': 'temperature' , 'value': current_temperature}, headers = {"Authorization": config.WEBHOOK_AUTH})
-
-    response_code = response.status_code
-
-    print("Sent temperature to webhook: " + str(current_temperature))
-
-    disconnect_from_wlan()
-
-    if not response_code == 200:
-        raise Exception("Response not OK!") 
+def main_loop():
+    """Main application loop"""
+    print("Starting main loop...")
     
-
-
-def run():
-    loop = True
-    while loop == True:
-        consecutive_errors = 0
+    while True:
         try:
-            broadcast_temperature(get_temperature())
-            consecutive_errors = 0
-
+            # Main application logic here
+            led.on()
+            
+            # Read sensors
+            if sensor:
+                reading = sensor.read()
+                print(f"Sensor reading: {reading}")
+            
+            # Network operations
+            if wlan and wlan.isconnected():
+                # Send data, handle requests, etc.
+                
+                send_reading(reading)
+                 
+                pass
+            else:
+                print("WiFi disconnected, attempting reconnect...")
+                setup_wifi()
+            
+            led.off()
+            time.sleep(config.LOOP_DELAY)
+            
+            # Memory management
+            gc.collect()
+                
+        except KeyboardInterrupt:
+            print("Program interrupted by user")
+            break
         except Exception as e:
-            print(f"Error: {e}")
-            consecutive_errors += 1
-            if consecutive_errors > 5:
-                print("Errored more than 5 times in a row. Stopping")
-                loop = False
-        finally:
-            print("Sleeping for " + str(config.SLEEP_DURATION) + " seconds")
-            sleep(config.SLEEP_DURATION)
+            handle_error(e)
+            time.sleep(10)
 
-run()
+def cleanup():
+    """Cleanup resources before exit"""
+    print("Cleaning up...")
+    led.off()
+    if wlan:
+        wlan.disconnect()
+
+def main():
+    """Main entry point"""
+    try:
+        print("=== Pico 2 W Application Starting ===")
+        
+        setup_hardware()
+        
+        setup_wifi()
+        
+        main_loop()
+        
+    except Exception as e:
+        handle_error(e)
+    finally:
+        cleanup()
+
+if __name__ == "__main__":
+    main()
 
